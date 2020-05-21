@@ -14,7 +14,7 @@ TARGET_URL = "https://www.x-kom.pl"
 
 chosen_item = ""
 price_range = []
-fetched_pages = []
+fetched_items = []
 PAGES_TO_SEARCH = 0
 
 def is_number(num):
@@ -61,7 +61,6 @@ def perform_search():
         browser.get(TARGET_URL)
 
         search_bar = WebDriverWait(browser, 120, 1).until(expect.visibility_of_element_located((By.XPATH, "//input[@placeholder='Czego szukasz?']")))
-        print(chosen_item)
         search_bar.send_keys(chosen_item)
         search_bar.send_keys(Keys.ENTER)
         pages = WebDriverWait(browser, 120, 1).until(expect.visibility_of_element_located((By.XPATH, "//input[@class='sc-11oikyw-1 hFPCZt sc-1s2eiz4-0 dySqGZ']")))
@@ -78,17 +77,18 @@ def perform_search():
                 PAGES_TO_SEARCH = math.floor(pages_num/3)
         else:
                 PAGES_TO_SEARCH = math.floor(pages_num*0.15)
-        
-        for i in range(1, PAGES_TO_SEARCH+1):
-                elem = WebDriverWait(browser, 120, 1).until(expect.visibility_of_all_elements_located((By.XPATH, "//*[@class='sc-162ysh3-1 esXNpw sc-bwzfXH dXCVXY']")))
-                fetched_pages.append(elem)
+        page_count = 1
+        print(PAGES_TO_SEARCH)
+        for i in range(0, PAGES_TO_SEARCH+1):
+                elems = WebDriverWait(browser, 120, 1).until(expect.visibility_of_all_elements_located((By.XPATH, "//*[@class='sc-162ysh3-1 esXNpw sc-bwzfXH dXCVXY']"))) 
+                for e in elems:
+                        fetched_items.append(e.text)
+                page_count+=1
                 btn_next = WebDriverWait(browser, 120, 1).until(expect.visibility_of_element_located(
-                        (By.XPATH, f"//a[contains(@href,'/szukaj?page={i+1}')]")))
+                        (By.XPATH, f"//a[contains(@href,'/szukaj?page={page_count}')]")))
                 btn_next.click()
-        for page in fetched_pages:
-                for e in page:
-                        print(e)
-        
+                time.sleep(3)
+
 
 
 
