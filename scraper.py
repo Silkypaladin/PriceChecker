@@ -10,6 +10,7 @@ import time
 import math
 import json
 from item import Item
+import pandas as pd
 
 DRIVER = ".\\chromedriver"
 TARGET_URL = "https://www.x-kom.pl"
@@ -18,6 +19,7 @@ chosen_item = ""
 price_range = []
 fetched_items = []
 PAGES_TO_SEARCH = 0
+SLEEP_TIME = 0.5
 
 def is_number(num):
         try:
@@ -54,6 +56,9 @@ def format_item_data(item, link):
         fields = item.split("\n")
         l = len(fields)
         #return Item(fields[0], fields[1:l-1],fields[l-1], link)
+        if fields[0] =="Polecamy":
+                fields=fields[1:]
+                l-=1
         return {
                 "Name": fields[0],
                 "Parameters": fields[1:l-1],
@@ -63,7 +68,7 @@ def format_item_data(item, link):
 
 
 def perform_search():
-        global PAGES_TO_SEARCH, fetched_items
+        global PAGES_TO_SEARCH, fetched_items, SLEEP_TIME
         link = ""
         options = opt.get_options()
         #opt.set_headless_mode(options)
@@ -95,16 +100,62 @@ def perform_search():
         for i in range(0, PAGES_TO_SEARCH+1):
                 elems = WebDriverWait(browser, 30, 1).until(expect.visibility_of_all_elements_located((By.XPATH, "//*[@class='sc-162ysh3-1 esXNpw sc-bwzfXH dXCVXY']"))) 
                 for e in elems:
-                        link = WebDriverWait(e, 30, 1).until(expect.visibility_of_element_located((By.XPATH, ".//a"))).get_attribute('href') 
+                        try:
+                                link = WebDriverWait(e, 30, 1).until(expect.visibility_of_element_located((By.XPATH, ".//a"))).get_attribute('href') 
+                        except:
+                                link = "Not fetched."
                         fetched_items.append(format_item_data(e.text, link))
                 page_count+=1
                 btn_next = WebDriverWait(browser, 30, 1).until(expect.visibility_of_element_located(
                         (By.XPATH, f"//a[contains(@href,'/szukaj?page={page_count}')]")))
                 btn_next.click()
-                time.sleep(1)
-        print(fetched_items)
+                time.sleep(SLEEP_TIME)
+        print("Items fetched. Performing caculations now.")
+        browser.quit()
 
+def analyze_results():
+        global fetched_items, price_range
+        results = []
+        # price format: '4 377,44 zł'"
+        pr = ""
+        for item in fetched_items:
+                pr = item["Price"] 
+                # Remove the currency
+                pr = pr[:len(pr)-3]
+                pr = pr.replace(",", ".")
+                pr = pr.replace(" ", "")
+                pr = float(pr)
+                if price_range[0] != 0 and price_range[1] != 0:
+                        if pr >= price_range[0] and pr <= price_range[1]:
+                                results.append(item)
+                elif price_range[0] == 0 and price_range[1] == 0:
+                        results.append(item)
+                elif price_range[0] == 0 and price_range[1] != 0:
+                        if pr <= price_range[1]:
+                                results.append(item)
+                else:
+                        if pr >= price_range[0]:
+                                results.append(item)
+        return results
+
+def results_into_json(results):
+        with open("items.json", "w+") as file:
+                json.dump(results, file, indent=3)
+        print("Finished calculating. Check 'items.json' file to view the results.")
+
+def generate_excel():
+        print("Do you want to generate a csv file? Type in 'yes' or 'no'")
+        inp = input(">")
+        while inp != 'yes' and inp != 'no':
+                print("Please type 'yes' or 'no'")
+                inp = input(">")
+        if inp == 'yes':
+                df = pd.read_json(r'.\\items.json')
+                df.to_excel(r'.\\items.csv', mode="w+", index=None)
 
 if __name__ == "__main__":
         get_users_input()
         perform_search()
+        res = analyze_results()
+        results_into_json(res)
+        generate_excel()
