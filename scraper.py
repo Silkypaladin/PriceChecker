@@ -1,5 +1,3 @@
-import requests
-from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.support import expected_conditions as expect
 from selenium.webdriver.common.by import By
@@ -143,7 +141,7 @@ def results_into_json(results):
                 json.dump(results, file, indent=3)
         print("Finished calculating. Check 'items.json' file to view the results.")
 
-def generate_excel():
+def generate_csv():
         print("Do you want to generate a csv file? Type in 'yes' or 'no'")
         inp = input(">")
         while inp != 'yes' and inp != 'no':
@@ -151,11 +149,11 @@ def generate_excel():
                 inp = input(">")
         if inp == 'yes':
                 df = pd.read_json(r'.\\items.json')
-                df.to_excel(r'.\\items.csv', mode="w+", index=None)
+                df.to_excel(r'.\\items.csv', mode="w+", index=None, header=True)
 
 if __name__ == "__main__":
         get_users_input()
         perform_search()
         res = analyze_results()
         results_into_json(res)
-        generate_excel()
+        generate_csv()
